@@ -56,6 +56,8 @@ export class WebrtcService {
     
     this.peerConnections.set(connectionId, pc);
 
+    const remoteStream = new MediaStream();
+
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         onSignal({ candidate: event.candidate });
@@ -63,9 +65,8 @@ export class WebrtcService {
     };
 
     pc.ontrack = (event) => {
-      if (event.streams && event.streams[0]) {
-        this.remoteStream$.next({ connectionId, stream: event.streams[0] });
-      }
+      remoteStream.addTrack(event.track);
+      this.remoteStream$.next({ connectionId, stream: remoteStream });
     };
 
     pc.oniceconnectionstatechange = () => {

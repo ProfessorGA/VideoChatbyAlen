@@ -22,20 +22,23 @@ export class SignalrService {
 
   constructor() { }
 
-  public startConnection(): void {
+  public async startConnection(): Promise<void> {
+    if (this.hubConnection?.state === signalR.HubConnectionState.Connected) return;
+
     this.hubConnection = new signalR.HubConnectionBuilder()
       .withUrl(environment.hubUrl)
       .withAutomaticReconnect()
       .build();
 
-    this.hubConnection
-      .start()
-      .then(() => {
-        console.log('SignalR Connection Started');
-        this.connectionEstablished.next(true);
-        this.registerHandlers();
-      })
-      .catch(err => console.log('Error while starting connection: ' + err));
+    try {
+      await this.hubConnection.start();
+      console.log('SignalR Connection Started');
+      this.connectionEstablished.next(true);
+      this.registerHandlers();
+    } catch (err) {
+      console.error('SignalR Connection Error:', err);
+      throw err;
+    }
   }
 
   private registerHandlers(): void {
@@ -70,20 +73,33 @@ export class SignalrService {
     });
   }
 
-  public createRoom(): void {
-    this.hubConnection?.invoke('CreateRoom');
+  public async createRoom(): Promise<void> {
+    await this.ensureConnected();
+    await this.hubConnection?.invoke('CreateRoom');
   }
 
-  public joinRoom(roomCode: string, userName: string): void {
-    this.hubConnection?.invoke('JoinRoom', roomCode, userName);
+  public async joinRoom(roomCode: string, userName: string): Promise<void> {
+    await this.ensureConnected();
+    await this.hubConnection?.invoke('JoinRoom', roomCode, userName);
   }
 
-  public sendSignal(targetConnectionId: string, signal: any): void {
-    this.hubConnection?.invoke('SendSignal', targetConnectionId, signal);
+  public async sendSignal(toConnectionId: string, signal: any): Promise<void> {
+    await this.ensureConnected();
+    await this.hubConnection?.invoke('SendSignal', toConnectionId, signal);
   }
 
-  public sendMessage(roomCode: string, userName: string, content: string): void {
-    this.hubConnection?.invoke('SendMessage', roomCode, userName, content);
+  public async sendMessage(roomCode: string, userName: string, content: string): Promise<void> {
+    await this.ensureConnected();
+    await this.hubConnection?.invoke('SendMessage', roomCode, userName, content);
+  }
+
+  private async ensureConnected(): Promise<void> {
+    if (!this.hubConnection || this.hubConnection.state === signalR.HubConnectionState.Disconnected) {
+      await this.startConnection();
+    }
+    while (this.hubConnection?.state !== signalR.HubConnectionState.Connected) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
   }
 
   public getConnectionId(): string | null {
