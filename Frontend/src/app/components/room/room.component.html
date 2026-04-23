@@ -16,12 +16,18 @@
 
     <div class="controls">
       <div class="device-selectors" *ngIf="showSettings">
-        <select (change)="onCameraChange($event)" class="device-select">
-          <option *ngFor="let device of cameras" [value]="device.deviceId">{{ device.label || 'Camera ' + device.deviceId }}</option>
-        </select>
-        <select (change)="onMicChange($event)" class="device-select">
-          <option *ngFor="let device of microphones" [value]="device.deviceId">{{ device.label || 'Mic ' + device.deviceId }}</option>
-        </select>
+        <div class="selector-group">
+          <label><span class="material-icons">videocam</span> Camera</label>
+          <select [(ngModel)]="selectedCamera" (change)="onCameraChange($event)" class="device-select">
+            <option *ngFor="let device of cameras" [value]="device.deviceId">{{ device.label || 'Camera ' + device.deviceId }}</option>
+          </select>
+        </div>
+        <div class="selector-group">
+          <label><span class="material-icons">mic</span> Microphone</label>
+          <select [(ngModel)]="selectedMic" (change)="onMicChange($event)" class="device-select">
+            <option *ngFor="let device of microphones" [value]="device.deviceId">{{ device.label || 'Mic ' + device.deviceId }}</option>
+          </select>
+        </div>
         <div class="setting-item">
           <label>Mirror Mode</label>
           <input type="checkbox" [checked]="isMirrored" (change)="toggleMirror()">

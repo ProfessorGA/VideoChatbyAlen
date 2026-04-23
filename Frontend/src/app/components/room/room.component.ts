@@ -104,6 +104,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.signalrService.userLeft$.subscribe(connectionId => {
       this.webrtcService.closeConnection(connectionId);
       this.remoteStreams.delete(connectionId);
+      this.remoteStreams = new Map(this.remoteStreams);
     });
 
     this.signalrService.messageReceived$.subscribe(msg => {
@@ -119,7 +120,9 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.webrtcService.remoteStream$.subscribe(data => {
       const peer = this.remoteStreams.get(data.connectionId);
       if (peer) {
-        peer.stream = data.stream;
+        // Trigger change detection by creating a new Map reference
+        this.remoteStreams.set(data.connectionId, { ...peer, stream: data.stream });
+        this.remoteStreams = new Map(this.remoteStreams);
       }
     });
   }
@@ -156,6 +159,14 @@ export class RoomComponent implements OnInit, OnDestroy {
     const devices = await this.webrtcService.getDevices();
     this.cameras = devices.filter(d => d.kind === 'videoinput');
     this.microphones = devices.filter(d => d.kind === 'audioinput');
+    
+    // Set initial selected values based on the current local stream tracks
+    if (this.localStream) {
+      const videoTrack = this.localStream.getVideoTracks()[0];
+      const audioTrack = this.localStream.getAudioTracks()[0];
+      if (videoTrack) this.selectedCamera = videoTrack.getSettings().deviceId || '';
+      if (audioTrack) this.selectedMic = audioTrack.getSettings().deviceId || '';
+    }
   }
 
   toggleSettings(): void {
