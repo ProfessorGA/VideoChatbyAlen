@@ -1,0 +1,27 @@
+# Visual Studio
+.vs/
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Angular / Node
+node_modules/
+dist/
+.angular/
+.npm/
+.vscode/
+
+# Build outputs
+out/
+publish/
+
+# Local env files
+.env
+.env.local
+
+# OS files
+Thumbs.db
+.DS_Store

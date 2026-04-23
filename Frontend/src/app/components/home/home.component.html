@@ -1,0 +1,28 @@
+<div class="home-container">
+  <div class="glass-card">
+    <h1 class="title">SyncVideo</h1>
+    <p class="subtitle">Real-time video chat with zero boundaries.</p>
+
+    <div class="actions">
+      <div class="action-section">
+        <h3>Create a New Room</h3>
+        <button (click)="createRoom()" class="btn-primary">Create Room</button>
+      </div>
+
+      <div class="divider"><span>OR</span></div>
+
+      <div class="action-section">
+        <h3>Join Existing Room</h3>
+        <div class="form-group">
+          <input type="text" [(ngModel)]="roomCode" placeholder="Enter Room Code (6 chars)" maxlength="6" class="input-field">
+          <input type="text" [(ngModel)]="userName" placeholder="Your Name" class="input-field">
+          <button (click)="joinRoom()" class="btn-secondary" [disabled]="!roomCode || !userName">Join Room</button>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="error" class="error-msg">
+      {{ error }}
+    </div>
+  </div>
+</div>

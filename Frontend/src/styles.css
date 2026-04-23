@@ -1,0 +1,86 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+:root {
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --bg-dark: #0f172a;
+  --card-bg: rgba(30, 41, 59, 0.7);
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --danger: #ef4444;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  height: 100vh;
+  overflow: hidden;
+  background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: white;
+  padding: 12px 16px;
+  outline: none;
+  font-size: 1rem;
+}
+
+input:focus {
+  border-color: var(--primary);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.developer-credit {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  z-index: 1000;
+  pointer-events: auto;
+  background: rgba(15, 23, 42, 0.5);
+  padding: 4px 12px;
+  border-radius: 100px;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.developer-credit a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.developer-credit a:hover {
+  color: var(--text-main);
+  text-decoration: underline;
+}
+
+/* Ensure room controls don't overlap too badly on mobile */
+@media (max-width: 600px) {
+  .developer-credit {
+    bottom: 80px;
+    right: 50%;
+    transform: translateX(50%);
+    white-space: nowrap;
+  }
+}

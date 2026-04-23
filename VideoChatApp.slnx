@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/Backend/">
+    <Project Path="Backend/VideoChatApp.Backend/VideoChatApp.Backend.csproj" />
+  </Folder>
+  <Folder Name="/Frontend/">
+    <Project Path="Frontend/VideoChatApp.Frontend.esproj">
+      <Build />
+      <Deploy />
+    </Project>
+  </Folder>
+</Solution>
