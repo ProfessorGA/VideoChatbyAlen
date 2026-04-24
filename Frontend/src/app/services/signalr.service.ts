@@ -16,6 +16,7 @@ export class SignalrService {
   public signalReceived$ = new Subject<{ senderConnectionId: string, signal: any }>();
   public messageReceived$ = new Subject<{ userName: string, content: string }>();
   public actionNotification$ = new Subject<{ connectionId: string, action: string }>();
+  public userStatusUpdate$ = new Subject<{ connectionId: string, status: string }>();
   public peerReady$ = new Subject<string>();
   public error$ = new Subject<string>();
   
@@ -76,6 +77,10 @@ export class SignalrService {
       this.actionNotification$.next({ connectionId, action });
     });
 
+    this.hubConnection.on('UserStatusUpdate', (connectionId: string, status: string) => {
+      this.userStatusUpdate$.next({ connectionId, status });
+    });
+
     this.hubConnection.on('MessageReceived', (data: { userName: string, content: string }) => {
       this.messageReceived$.next(data);
     });
@@ -122,6 +127,12 @@ export class SignalrService {
   public async notifyAction(roomCode: string, action: string): Promise<void> {
     if (this.hubConnection?.state === signalR.HubConnectionState.Connected) {
       await this.hubConnection.invoke('NotifyAction', roomCode, action);
+    }
+  }
+
+  public async updateStatus(roomCode: string, status: string): Promise<void> {
+    if (this.hubConnection?.state === signalR.HubConnectionState.Connected) {
+      await this.hubConnection.invoke('UpdateStatus', roomCode, status);
     }
   }
 

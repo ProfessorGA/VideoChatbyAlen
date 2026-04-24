@@ -30,7 +30,7 @@
             {{ userName }} (You)
           </div>
           <div class="user-item" *ngFor="let peer of remoteStreams | keyvalue">
-            <span class="user-dot"></span>
+            <span class="user-dot" [class.online]="peer.value.status === 'online'" [class.away]="peer.value.status === 'away'"></span>
             {{ peer.value.userName }}
           </div>
         </div>

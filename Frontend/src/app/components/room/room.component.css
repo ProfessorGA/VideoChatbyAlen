@@ -104,6 +104,7 @@
 .user-item { padding: 8px 15px; display: flex; align-items: center; gap: 10px; font-size: 13px; }
 .user-dot { width: 8px; height: 8px; border-radius: 50%; background: #57606f; }
 .user-dot.online { background: #2ed573; box-shadow: 0 0 8px #2ed573; }
+.user-dot.away { background: #ff4757; box-shadow: 0 0 8px #ff4757; }
 
 .remote-notification-alert {
   position: fixed;

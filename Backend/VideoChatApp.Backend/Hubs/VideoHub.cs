@@ -53,6 +53,11 @@ namespace VideoChatApp.Backend.Hubs
             await Clients.OthersInGroup(roomCode).SendAsync("ActionNotification", Context.ConnectionId, action);
         }
 
+        public async Task UpdateStatus(string roomCode, string status)
+        {
+            await Clients.OthersInGroup(roomCode).SendAsync("UserStatusUpdate", Context.ConnectionId, status);
+        }
+
         public async Task SendMessage(string roomCode, string userName, string content)
         {
             await Clients.Group(roomCode).SendAsync("MessageReceived", new ChatMessage 

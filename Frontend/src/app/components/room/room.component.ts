@@ -8,6 +8,7 @@ import { FormsModule } from '@angular/forms';
 interface RemotePeer {
   stream: MediaStream;
   userName: string;
+  status: 'online' | 'away' | 'offline';
 }
 
 @Component({
@@ -129,7 +130,8 @@ export class RoomComponent implements OnInit, OnDestroy {
           const cachedStream = this.streamCache.get(user.connectionId);
           this.remoteStreams.set(user.connectionId, { 
             stream: cachedStream || new MediaStream(), 
-            userName: user.userName 
+            userName: user.userName,
+            status: 'online'
           });
         }
       });
@@ -137,9 +139,18 @@ export class RoomComponent implements OnInit, OnDestroy {
     });
 
     this.signalrService.userLeft$.subscribe(connectionId => {
+      console.log('User left, cleaning up:', connectionId);
       this.webrtcService.closeConnection(connectionId);
       this.remoteStreams.delete(connectionId);
       this.remoteStreams = new Map(this.remoteStreams);
+    });
+
+    this.signalrService.userStatusUpdate$.subscribe(data => {
+      const peer = this.remoteStreams.get(data.connectionId);
+      if (peer) {
+        peer.status = data.status as any;
+        this.remoteStreams = new Map(this.remoteStreams);
+      }
     });
 
     this.signalrService.messageReceived$.subscribe(msg => {
@@ -170,6 +181,22 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.streamCache.set(data.connectionId, data.stream);
       }
     });
+  }
+
+  @HostListener('document:visibilitychange')
+  onVisibilityChange(): void {
+    const status = document.visibilityState === 'visible' ? 'online' : 'away';
+    this.signalrService.updateStatus(this.roomCode, status);
+  }
+
+  @HostListener('window:blur')
+  onBlur(): void {
+    this.signalrService.updateStatus(this.roomCode, 'away');
+  }
+
+  @HostListener('window:focus')
+  onFocus(): void {
+    this.signalrService.updateStatus(this.roomCode, 'online');
   }
 
   toggleAudio(): void {
