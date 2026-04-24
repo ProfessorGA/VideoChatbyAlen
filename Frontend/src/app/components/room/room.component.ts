@@ -30,7 +30,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   isChatOpen: boolean = false;
   unreadMessages: number = 0;
   
-  isAudioOn: boolean = true;
+  isAudioOn: boolean = false;
   isVideoOn: boolean = true;
   isMirrored: boolean = true;
   showSettings: boolean = false;
@@ -68,6 +68,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     try {
       this.localStream = await this.webrtcService.getLocalStream();
       await this.loadDevices();
+      this.applyCurrentMediaStates();
     } catch (err) {
       console.error('Could not get local stream', err);
       alert('Camera and Microphone access are required.');
