@@ -67,6 +67,13 @@ namespace VideoChatApp.Backend.Hubs
             });
         }
 
+        public async Task LeaveRoom(string roomCode)
+        {
+            _roomService.LeaveRoom(Context.ConnectionId, out _);
+            await Clients.Group(roomCode).SendAsync("UserLeft", Context.ConnectionId);
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomCode);
+        }
+
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
             _roomService.LeaveRoom(Context.ConnectionId, out var roomCode);

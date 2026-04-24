@@ -19,10 +19,12 @@ export class HomeComponent implements OnInit {
   constructor(private signalrService: SignalrService, private router: Router) { }
 
   ngOnInit(): void {
+    const savedName = localStorage.getItem('vc_username');
+    if (savedName) this.userName = savedName;
+
     this.signalrService.startConnection();
 
     this.signalrService.roomCreated$.subscribe(code => {
-      // After room is created, we still need the user to provide a name
       this.roomCode = code;
     });
 
@@ -31,6 +33,7 @@ export class HomeComponent implements OnInit {
     });
 
     this.signalrService.joinedRoom$.subscribe(room => {
+      localStorage.setItem('vc_username', this.userName);
       this.router.navigate(['/room', room.roomCode], { state: { userName: this.userName } });
     });
   }

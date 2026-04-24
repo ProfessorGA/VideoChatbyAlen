@@ -9,6 +9,9 @@ interface RemotePeer {
   stream: MediaStream;
   userName: string;
   status: 'online' | 'away' | 'offline';
+  isAudioOn: boolean;
+  isVideoOn: boolean;
+  hasStream: boolean;
 }
 
 @Component({
@@ -85,7 +88,6 @@ export class RoomComponent implements OnInit, OnDestroy {
 
     this.setupSignalRHandlers();
     this.setupWebRTCHandlers();
-    this.setupVisibilityHandler();
     this.startTimer();
 
     // After everything is setup, notify others that we are ready
@@ -101,7 +103,14 @@ export class RoomComponent implements OnInit, OnDestroy {
       
       console.log('User joined:', data);
       // We don't initiate yet, we wait for PeerReady from the new user
-      this.remoteStreams.set(data.connectionId, { stream: new MediaStream(), userName: data.userName });
+      this.remoteStreams.set(data.connectionId, { 
+        stream: new MediaStream(), 
+        userName: data.userName,
+        status: 'online',
+        isAudioOn: true,
+        isVideoOn: true,
+        hasStream: false
+      });
       this.remoteStreams = new Map(this.remoteStreams);
     });
 
@@ -131,7 +140,10 @@ export class RoomComponent implements OnInit, OnDestroy {
           this.remoteStreams.set(user.connectionId, { 
             stream: cachedStream || new MediaStream(), 
             userName: user.userName,
-            status: 'online'
+            status: 'online',
+            isAudioOn: true,
+            isVideoOn: true,
+            hasStream: !!cachedStream
           });
         }
       });
@@ -148,7 +160,14 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.signalrService.userStatusUpdate$.subscribe(data => {
       const peer = this.remoteStreams.get(data.connectionId);
       if (peer) {
-        peer.status = data.status as any;
+        try {
+          const state = JSON.parse(data.status);
+          peer.status = state.status || peer.status;
+          peer.isAudioOn = state.isAudioOn ?? peer.isAudioOn;
+          peer.isVideoOn = state.isVideoOn ?? peer.isVideoOn;
+        } catch {
+          peer.status = data.status as any;
+        }
         this.remoteStreams = new Map(this.remoteStreams);
       }
     });
@@ -174,7 +193,7 @@ export class RoomComponent implements OnInit, OnDestroy {
       const peer = this.remoteStreams.get(data.connectionId);
       if (peer) {
         // Trigger change detection by creating a new Map reference
-        this.remoteStreams.set(data.connectionId, { ...peer, stream: data.stream });
+        this.remoteStreams.set(data.connectionId, { ...peer, stream: data.stream, hasStream: true });
         this.remoteStreams = new Map(this.remoteStreams);
       } else {
         // Cache the stream if the user isn't in the map yet
@@ -203,6 +222,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     if (this.localStream) {
       this.isAudioOn = !this.isAudioOn;
       this.localStream.getAudioTracks().forEach(track => track.enabled = this.isAudioOn);
+      this.broadcastMediaState();
     }
   }
 
@@ -210,7 +230,17 @@ export class RoomComponent implements OnInit, OnDestroy {
     if (this.localStream) {
       this.isVideoOn = !this.isVideoOn;
       this.localStream.getVideoTracks().forEach(track => track.enabled = this.isVideoOn);
+      this.broadcastMediaState();
     }
+  }
+
+  private broadcastMediaState(): void {
+    const state = JSON.stringify({
+      status: document.visibilityState === 'visible' ? 'online' : 'away',
+      isAudioOn: this.isAudioOn,
+      isVideoOn: this.isVideoOn
+    });
+    this.signalrService.updateStatus(this.roomCode, state);
   }
 
   toggleChat(): void {
@@ -279,16 +309,6 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
   }
 
-  private setupVisibilityHandler(): void {
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        console.log('App hidden: Auto-muting for privacy');
-        if (this.isAudioOn) this.toggleAudio();
-        if (this.isVideoOn) this.toggleVideo();
-      }
-    });
-  }
-
   private startTimer(): void {
     this.timerInterval = setInterval(() => {
       this.callDuration++;
@@ -329,8 +349,13 @@ export class RoomComponent implements OnInit, OnDestroy {
   leaveRoom(): void {
     this.webrtcService.stopLocalStream();
     this.webrtcService.closeAllConnections();
-    this.signalrService.leaveRoom();
+    this.signalrService.leaveRoom(this.roomCode);
     this.router.navigate(['/'], { replaceUrl: true });
+  }
+
+  @HostListener('window:beforeunload')
+  onBeforeUnload(): void {
+    this.leaveRoom();
   }
 
   private scrollToBottom(): void {
@@ -343,6 +368,6 @@ export class RoomComponent implements OnInit, OnDestroy {
     if (this.timerInterval) clearInterval(this.timerInterval);
     this.webrtcService.stopLocalStream();
     this.webrtcService.closeAllConnections();
-    this.signalrService.leaveRoom();
+    this.signalrService.leaveRoom(this.roomCode);
   }
 }

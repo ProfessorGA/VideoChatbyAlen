@@ -30,7 +30,7 @@
             {{ userName }} (You)
           </div>
           <div class="user-item" *ngFor="let peer of remoteStreams | keyvalue">
-            <span class="user-dot" [class.online]="peer.value.status === 'online'" [class.away]="peer.value.status === 'away'"></span>
+            <span class="user-dot" [class.online]="(peer.value.status || 'online') === 'online'" [class.away]="peer.value.status === 'away'"></span>
             {{ peer.value.userName }}
           </div>
         </div>
@@ -49,20 +49,49 @@
     <div class="grid-container" [class.with-chat]="isChatOpen">
       <div class="video-grid" [class.single]="remoteStreams.size === 0">
         <!-- Local User -->
-        <div class="video-card local" [class.mirrored]="isMirrored">
-          <video #localVideo [srcObject]="localStream" autoplay playsinline muted></video>
+        <div class="video-card local" [class.mirrored]="isMirrored" [class.video-off]="!isVideoOn">
+          <video #localVideo [srcObject]="localStream" autoplay playsinline muted [class.hidden]="!isVideoOn"></video>
+          
+          <!-- Media Indicators -->
+          <div class="media-indicators">
+            <span *ngIf="!isAudioOn" class="material-icons">mic_off</span>
+            <span *ngIf="!isVideoOn" class="material-icons">videocam_off</span>
+          </div>
+
+          <!-- Profile Placeholder when Video is Off -->
+          <div class="profile-placeholder" *ngIf="!isVideoOn">
+            <div class="profile-avatar">{{ userName.charAt(0).toUpperCase() }}</div>
+            <span class="camera-off-msg">Camera Off</span>
+          </div>
+
           <div class="video-info top-left">
             <span class="name-tag">You ({{ userName }})</span>
-          </div>
-          <div class="video-info top-right">
-            <span class="material-icons status-icon warn" *ngIf="!isAudioOn">mic_off</span>
-            <span class="material-icons status-icon warn" *ngIf="!isVideoOn">videocam_off</span>
           </div>
         </div>
 
         <!-- Remote Users -->
-        <div *ngFor="let peer of remoteStreams | keyvalue" class="video-card remote animate-in">
-          <video [srcObject]="peer.value.stream" autoplay playsinline (loadedmetadata)="$any($event.target).play()"></video>
+        <div class="video-card remote animate-in" *ngFor="let peer of remoteStreams | keyvalue" [class.mirrored]="false" [class.video-off]="!peer.value.isVideoOn">
+          <ng-container *ngIf="peer.value.hasStream; else connecting">
+            <video [srcObject]="peer.value.stream" autoplay playsinline [muted]="false" [class.hidden]="!peer.value.isVideoOn"></video>
+            
+            <div class="media-indicators">
+              <span *ngIf="!peer.value.isAudioOn" class="material-icons">mic_off</span>
+              <span *ngIf="!peer.value.isVideoOn" class="material-icons">videocam_off</span>
+            </div>
+
+            <div class="profile-placeholder" *ngIf="!peer.value.isVideoOn">
+              <div class="profile-avatar">{{ peer.value.userName.charAt(0).toUpperCase() }}</div>
+              <span class="camera-off-msg">Camera Off</span>
+            </div>
+          </ng-container>
+
+          <ng-template #connecting>
+            <div class="profile-placeholder connecting">
+              <div class="loader-spinner"></div>
+              <span class="camera-off-msg">Connecting...</span>
+            </div>
+          </ng-template>
+
           <div class="video-info top-left">
             <span class="name-tag">{{ peer.value.userName }}</span>
           </div>

@@ -136,10 +136,11 @@ export class SignalrService {
     }
   }
 
-  public async leaveRoom(): Promise<void> {
+  public async leaveRoom(roomCode: string): Promise<void> {
     this.joinedRoom$.next(null);
     if (this.hubConnection?.state === signalR.HubConnectionState.Connected) {
-      await this.hubConnection.invoke('LeaveRoom');
+      await this.hubConnection.invoke('LeaveRoom', roomCode);
+      await this.hubConnection.stop();
     }
   }
 
