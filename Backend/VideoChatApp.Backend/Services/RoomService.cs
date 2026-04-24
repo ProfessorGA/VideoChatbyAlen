@@ -16,7 +16,7 @@ namespace VideoChatApp.Backend.Services
     {
         private readonly ConcurrentDictionary<string, Room> _rooms = new();
         private readonly ConcurrentDictionary<string, string> _userToRoom = new();
-        private const int MaxUsers = 5;
+        private const int MaxUsers = 6;
 
         public string CreateRoom()
         {

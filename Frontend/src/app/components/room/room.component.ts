@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, HostListener } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SignalrService } from '../../services/signalr.service';
 import { WebrtcService } from '../../services/webrtc.service';
@@ -276,9 +276,8 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   copyRoomCode(): void {
     navigator.clipboard.writeText(this.roomCode);
-    this.copyAlert = 'Copied!';
+    this.showRemoteNotification('Room code copied!');
     this.signalrService.notifyAction(this.roomCode, 'copied_room_code');
-    setTimeout(() => this.copyAlert = '', 3000);
   }
 
   toggleUserList(event: Event): void {
