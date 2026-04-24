@@ -42,6 +42,14 @@ export class RoomComponent implements OnInit, OnDestroy {
   speakers: MediaDeviceInfo[] = [];
   selectedSpeaker: string = '';
 
+  callDuration: number = 0;
+  callTimer: string = '00:00:00';
+  private timerInterval: any;
+
+  showUserList: boolean = false;
+  copyAlert: string = '';
+  remoteNotification: string = '';
+
   private streamCache: Map<string, MediaStream> = new Map();
 
   constructor(
@@ -76,6 +84,8 @@ export class RoomComponent implements OnInit, OnDestroy {
 
     this.setupSignalRHandlers();
     this.setupWebRTCHandlers();
+    this.setupVisibilityHandler();
+    this.startTimer();
 
     // After everything is setup, notify others that we are ready
     if (this.localStream) {
@@ -134,10 +144,17 @@ export class RoomComponent implements OnInit, OnDestroy {
 
     this.signalrService.messageReceived$.subscribe(msg => {
       this.messages.push(msg);
-      if (!this.isChatOpen) {
-        this.unreadMessages++;
+      // Auto-popup chat for other users
+      this.isChatOpen = true;
+      this.unreadMessages = 0;
+      setTimeout(() => this.scrollToBottom());
+    });
+
+    this.signalrService.actionNotification$.subscribe(data => {
+      const user = this.remoteStreams.get(data.connectionId);
+      if (user && data.action === 'copied_room_code') {
+        this.showRemoteNotification(`${user.userName} copied the room code`);
       }
-      setTimeout(() => this.scrollToBottom(), 100);
     });
   }
 
@@ -235,6 +252,50 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
   }
 
+  private setupVisibilityHandler(): void {
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        console.log('App hidden: Auto-muting for privacy');
+        if (this.isAudioOn) this.toggleAudio();
+        if (this.isVideoOn) this.toggleVideo();
+      }
+    });
+  }
+
+  private startTimer(): void {
+    this.timerInterval = setInterval(() => {
+      this.callDuration++;
+      const hours = Math.floor(this.callDuration / 3600);
+      const minutes = Math.floor((this.callDuration % 3600) / 60);
+      const seconds = this.callDuration % 60;
+      this.callTimer = [hours, minutes, seconds]
+        .map(v => v < 10 ? '0' + v : v)
+        .join(':');
+    }, 1000);
+  }
+
+  copyRoomCode(): void {
+    navigator.clipboard.writeText(this.roomCode);
+    this.copyAlert = 'Copied!';
+    this.signalrService.notifyAction(this.roomCode, 'copied_room_code');
+    setTimeout(() => this.copyAlert = '', 3000);
+  }
+
+  toggleUserList(event: Event): void {
+    event.stopPropagation();
+    this.showUserList = !this.showUserList;
+  }
+
+  private showRemoteNotification(message: string): void {
+    this.remoteNotification = message;
+    setTimeout(() => this.remoteNotification = '', 5000);
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.showUserList = false;
+  }
+
   toggleMirror(): void {
     this.isMirrored = !this.isMirrored;
   }
@@ -253,6 +314,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.timerInterval) clearInterval(this.timerInterval);
     this.webrtcService.stopLocalStream();
     this.webrtcService.closeAllConnections();
     this.signalrService.leaveRoom();

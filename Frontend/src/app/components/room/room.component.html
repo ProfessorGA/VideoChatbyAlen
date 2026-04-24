@@ -1,81 +1,144 @@
 <div class="room-wrapper">
-  <div class="main-content">
-    <div class="video-grid" [ngClass]="'grid-' + (remoteStreams.size + 1)">
-      <!-- Local Video -->
-      <div class="video-container local" [class.mirrored]="isMirrored">
-        <video #localVideo [srcObject]="localStream" autoplay playsinline muted></video>
-        <div class="user-label">You ({{ userName }})</div>
-      </div>
-
-      <!-- Remote Videos -->
-      <div *ngFor="let peer of remoteStreams | keyvalue" class="video-container">
-        <video [srcObject]="peer.value.stream" autoplay playsinline></video>
-        <div class="user-label">{{ peer.value.userName }}</div>
+  <!-- 1. Header: Timer and Room Code -->
+  <header class="room-header">
+    <div class="header-section">
+      <div class="timer-badge">
+        <span class="material-icons">schedule</span>
+        {{ callTimer }}
       </div>
     </div>
-
-    <div class="controls">
-      <div class="device-selectors" *ngIf="showSettings">
-        <div class="selector-group">
-          <label><span class="material-icons">videocam</span> Camera</label>
-          <select [(ngModel)]="selectedCamera" (change)="onCameraChange($event)" class="device-select">
-            <option *ngFor="let device of cameras" [value]="device.deviceId">{{ device.label || 'Camera ' + device.deviceId }}</option>
-          </select>
-        </div>
-        <div class="selector-group">
-        <label><span class="material-icons">mic</span> Microphone</label>
-        <select class="device-select" [ngModel]="selectedMic" (change)="onMicChange($event)">
-          <option *ngFor="let mic of microphones" [value]="mic.deviceId">{{ mic.label }}</option>
-        </select>
-      </div>
-
-      <div class="selector-group" *ngIf="speakers.length > 0">
-        <label><span class="material-icons">volume_up</span> Speaker</label>
-        <select class="device-select" [ngModel]="selectedSpeaker" (change)="onSpeakerChange($event)">
-          <option *ngFor="let speaker of speakers" [value]="speaker.deviceId">{{ speaker.label }}</option>
-        </select>
-      </div>
-
-      <div class="setting-item">
-          <label>Mirror Mode</label>
-          <input type="checkbox" [checked]="isMirrored" (change)="toggleMirror()">
-        </div>
-      </div>
-
-      <button (click)="toggleAudio()" [class.off]="!isAudioOn" title="Toggle Mic">
-        <span class="material-icons">{{ isAudioOn ? 'mic' : 'mic_off' }}</span>
-      </button>
-      <button (click)="toggleVideo()" [class.off]="!isVideoOn" title="Toggle Video">
-        <span class="material-icons">{{ isVideoOn ? 'videocam' : 'videocam_off' }}</span>
-      </button>
-      <button (click)="toggleSettings()" [class.active]="showSettings" title="Settings">
-        <span class="material-icons">settings</span>
-      </button>
-      <button (click)="leaveRoom()" class="hangup" title="Leave">
-        <span class="material-icons">call_end</span>
-      </button>
-      <button (click)="toggleChat()" class="chat-toggle" title="Chat">
-        <span class="material-icons">chat</span>
-        <span class="badge" *ngIf="unreadMessages > 0">{{ unreadMessages }}</span>
-      </button>
+    
+    <div class="header-section center" (click)="copyRoomCode()">
+      <span class="room-label">Room:</span>
+      <span class="room-code">{{ roomCode }}</span>
+      <span class="material-icons copy-icon">content_copy</span>
+      <span class="copy-success-badge" *ngIf="copyAlert">{{ copyAlert }}</span>
     </div>
+
+    <div class="header-section right">
+      <div class="count-badge clickable" (click)="toggleUserList($event)">
+        <span class="material-icons">people</span>
+        {{ remoteStreams.size + 1 }}
+      </div>
+
+      <!-- User List Popup -->
+      <div class="user-list-popup" *ngIf="showUserList" (click)="$event.stopPropagation()">
+        <div class="popup-header">Participants</div>
+        <div class="popup-body">
+          <div class="user-item">
+            <span class="user-dot online"></span>
+            {{ userName }} (You)
+          </div>
+          <div class="user-item" *ngFor="let peer of remoteStreams | keyvalue">
+            <span class="user-dot"></span>
+            {{ peer.value.userName }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Remote Action Notification Alert -->
+  <div class="remote-notification-alert" *ngIf="remoteNotification">
+    <span class="material-icons">info</span>
+    {{ remoteNotification }}
   </div>
 
-  <div class="chat-panel" [class.open]="isChatOpen">
-    <div class="chat-header">
-      <h3>Room: {{ roomCode }}</h3>
-      <button (click)="toggleChat()" class="close-btn">&times;</button>
+  <!-- 2. Main Content: Video Grid + Side Chat -->
+  <main class="room-main">
+    <div class="grid-container" [class.with-chat]="isChatOpen">
+      <div class="video-grid" [class.single]="remoteStreams.size === 0">
+        <!-- Local User -->
+        <div class="video-card local" [class.mirrored]="isMirrored">
+          <video #localVideo [srcObject]="localStream" autoplay playsinline muted></video>
+          <div class="video-info top-left">
+            <span class="name-tag">You ({{ userName }})</span>
+          </div>
+          <div class="video-info top-right">
+            <span class="material-icons status-icon warn" *ngIf="!isAudioOn">mic_off</span>
+            <span class="material-icons status-icon warn" *ngIf="!isVideoOn">videocam_off</span>
+          </div>
+        </div>
+
+        <!-- Remote Users -->
+        <div *ngFor="let peer of remoteStreams | keyvalue" class="video-card remote animate-in">
+          <video [srcObject]="peer.value.stream" autoplay playsinline (loadedmetadata)="$any($event.target).play()"></video>
+          <div class="video-info top-left">
+            <span class="name-tag">{{ peer.value.userName }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Side Panel -->
+      <aside class="side-chat" *ngIf="isChatOpen">
+        <div class="chat-header">
+          <h3>Chat</h3>
+          <button class="icon-btn" (click)="toggleChat()">&times;</button>
+        </div>
+        <div class="chat-body" #chatContainer>
+          <div *ngFor="let msg of messages" class="chat-msg" [class.mine]="msg.userName === userName">
+            <div class="msg-author">{{ msg.userName }}</div>
+            <div class="msg-text">{{ msg.content }}</div>
+          </div>
+        </div>
+        <div class="chat-footer">
+          <input type="text" [(ngModel)]="newMessage" (keyup.enter)="sendMessage()" placeholder="Message...">
+          <button (click)="sendMessage()"><span class="material-icons">send</span></button>
+        </div>
+      </aside>
     </div>
-    <div class="chat-messages" #chatContainer>
-      <div *ngFor="let msg of messages" class="message" [class.own]="msg.userName === userName">
-        <div class="msg-sender">{{ msg.userName }}</div>
-        <div class="msg-content">{{ msg.content }}</div>
-        <div class="msg-time">{{ msg.timestamp | date:'shortTime' }}</div>
+  </main>
+
+  <!-- 3. Footer: Controls -->
+  <footer class="room-footer">
+    <div class="controls-wrapper">
+      <!-- Device Settings Popup -->
+      <div class="settings-drawer" *ngIf="showSettings">
+        <div class="drawer-header">Settings</div>
+        <div class="drawer-content">
+          <div class="opt-group">
+            <label>Camera</label>
+            <select [(ngModel)]="selectedCamera" (change)="onCameraChange($event)">
+              <option *ngFor="let c of cameras" [value]="c.deviceId">{{ c.label }}</option>
+            </select>
+          </div>
+          <div class="opt-group">
+            <label>Microphone</label>
+            <select [(ngModel)]="selectedMic" (change)="onMicChange($event)">
+              <option *ngFor="let m of microphones" [value]="m.deviceId">{{ m.label }}</option>
+            </select>
+          </div>
+          <div class="opt-group" *ngIf="speakers.length > 0">
+            <label>Speaker</label>
+            <select [(ngModel)]="selectedSpeaker" (change)="onSpeakerChange($event)">
+              <option *ngFor="let s of speakers" [value]="s.deviceId">{{ s.label }}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn" [class.off]="!isAudioOn" (click)="toggleAudio()" title="Toggle Mic">
+          <span class="material-icons">{{ isAudioOn ? 'mic' : 'mic_off' }}</span>
+        </button>
+        <button class="btn" [class.off]="!isVideoOn" (click)="toggleVideo()" title="Toggle Video">
+          <span class="material-icons">{{ isVideoOn ? 'videocam' : 'videocam_off' }}</span>
+        </button>
+        <button class="btn" (click)="toggleSettings()" [class.active]="showSettings">
+          <span class="material-icons">settings</span>
+        </button>
+        <button class="btn hangup" (click)="leaveRoom()">
+          <span class="material-icons">call_end</span>
+        </button>
+        <button class="btn" (click)="toggleChat()" [class.active]="isChatOpen">
+          <span class="material-icons">chat</span>
+          <span class="badge" *ngIf="unreadMessages > 0">{{ unreadMessages }}</span>
+        </button>
       </div>
     </div>
-    <div class="chat-input">
-      <input type="text" [(ngModel)]="newMessage" (keyup.enter)="sendMessage()" placeholder="Type a message...">
-      <button (click)="sendMessage()">Send</button>
-    </div>
+  </footer>
+
+  <div class="branding-bar">
+    Designed and Developed by <strong>Alen Mathew Zachariah</strong>
   </div>
 </div>

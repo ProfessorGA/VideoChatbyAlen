@@ -15,6 +15,7 @@ export class SignalrService {
   public joinedRoom$ = new BehaviorSubject<any>(null);
   public signalReceived$ = new Subject<{ senderConnectionId: string, signal: any }>();
   public messageReceived$ = new Subject<{ userName: string, content: string }>();
+  public actionNotification$ = new Subject<{ connectionId: string, action: string }>();
   public peerReady$ = new Subject<string>();
   public error$ = new Subject<string>();
   
@@ -71,6 +72,10 @@ export class SignalrService {
       this.peerReady$.next(connectionId);
     });
 
+    this.hubConnection.on('ActionNotification', (connectionId: string, action: string) => {
+      this.actionNotification$.next({ connectionId, action });
+    });
+
     this.hubConnection.on('MessageReceived', (data: { userName: string, content: string }) => {
       this.messageReceived$.next(data);
     });
@@ -111,6 +116,12 @@ export class SignalrService {
     }
     while (this.hubConnection?.state !== signalR.HubConnectionState.Connected) {
       await new Promise(resolve => setTimeout(resolve, 200));
+    }
+  }
+
+  public async notifyAction(roomCode: string, action: string): Promise<void> {
+    if (this.hubConnection?.state === signalR.HubConnectionState.Connected) {
+      await this.hubConnection.invoke('NotifyAction', roomCode, action);
     }
   }
 

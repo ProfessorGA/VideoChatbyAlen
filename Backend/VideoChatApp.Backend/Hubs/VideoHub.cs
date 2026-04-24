@@ -45,7 +45,12 @@ namespace VideoChatApp.Backend.Hubs
 
         public async Task NotifyReady(string roomCode)
         {
-            await Clients.GroupExcept(roomCode, Context.ConnectionId).SendAsync("PeerReady", Context.ConnectionId);
+            await Clients.OthersInGroup(roomCode).SendAsync("PeerReady", Context.ConnectionId);
+        }
+
+        public async Task NotifyAction(string roomCode, string action)
+        {
+            await Clients.OthersInGroup(roomCode).SendAsync("ActionNotification", Context.ConnectionId, action);
         }
 
         public async Task SendMessage(string roomCode, string userName, string content)
