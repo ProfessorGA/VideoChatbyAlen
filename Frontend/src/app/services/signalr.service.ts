@@ -12,9 +12,10 @@ export class SignalrService {
   public roomCreated$ = new Subject<string>();
   public userJoined$ = new Subject<{ connectionId: string, userName: string }>();
   public userLeft$ = new Subject<string>();
-  public joinedRoom$ = new Subject<any>();
+  public joinedRoom$ = new BehaviorSubject<any>(null);
   public signalReceived$ = new Subject<{ senderConnectionId: string, signal: any }>();
   public messageReceived$ = new Subject<{ userName: string, content: string }>();
+  public peerReady$ = new Subject<string>();
   public error$ = new Subject<string>();
   
   private connectionEstablished = new BehaviorSubject<boolean>(false);
@@ -60,8 +61,14 @@ export class SignalrService {
       this.joinedRoom$.next(room);
     });
 
-    this.hubConnection.on('SignalReceived', (data: { senderConnectionId: string, signal: any }) => {
-      this.signalReceived$.next(data);
+    this.hubConnection.on('SignalReceived', (data: any) => {
+      const senderConnectionId = data.senderConnectionId || data.SenderConnectionId;
+      const signal = data.signal || data.Signal;
+      this.signalReceived$.next({ senderConnectionId, signal });
+    });
+
+    this.hubConnection.on('PeerReady', (connectionId: string) => {
+      this.peerReady$.next(connectionId);
     });
 
     this.hubConnection.on('MessageReceived', (data: { userName: string, content: string }) => {
@@ -86,6 +93,11 @@ export class SignalrService {
   public async sendSignal(toConnectionId: string, signal: any): Promise<void> {
     await this.ensureConnected();
     await this.hubConnection?.invoke('SendSignal', toConnectionId, signal);
+  }
+
+  public async notifyReady(roomCode: string): Promise<void> {
+    await this.ensureConnected();
+    await this.hubConnection?.invoke('NotifyReady', roomCode);
   }
 
   public async sendMessage(roomCode: string, userName: string, content: string): Promise<void> {

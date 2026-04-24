@@ -23,12 +23,20 @@
           </select>
         </div>
         <div class="selector-group">
-          <label><span class="material-icons">mic</span> Microphone</label>
-          <select [(ngModel)]="selectedMic" (change)="onMicChange($event)" class="device-select">
-            <option *ngFor="let device of microphones" [value]="device.deviceId">{{ device.label || 'Mic ' + device.deviceId }}</option>
-          </select>
-        </div>
-        <div class="setting-item">
+        <label><span class="material-icons">mic</span> Microphone</label>
+        <select class="device-select" [ngModel]="selectedMic" (change)="onMicChange($event)">
+          <option *ngFor="let mic of microphones" [value]="mic.deviceId">{{ mic.label }}</option>
+        </select>
+      </div>
+
+      <div class="selector-group" *ngIf="speakers.length > 0">
+        <label><span class="material-icons">volume_up</span> Speaker</label>
+        <select class="device-select" [ngModel]="selectedSpeaker" (change)="onSpeakerChange($event)">
+          <option *ngFor="let speaker of speakers" [value]="speaker.deviceId">{{ speaker.label }}</option>
+        </select>
+      </div>
+
+      <div class="setting-item">
           <label>Mirror Mode</label>
           <input type="checkbox" [checked]="isMirrored" (change)="toggleMirror()">
         </div>

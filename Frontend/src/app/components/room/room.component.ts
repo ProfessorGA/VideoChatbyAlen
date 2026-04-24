@@ -39,6 +39,10 @@ export class RoomComponent implements OnInit, OnDestroy {
   microphones: MediaDeviceInfo[] = [];
   selectedCamera: string = '';
   selectedMic: string = '';
+  speakers: MediaDeviceInfo[] = [];
+  selectedSpeaker: string = '';
+
+  private streamCache: Map<string, MediaStream> = new Map();
 
   constructor(
     private route: ActivatedRoute,
@@ -71,17 +75,32 @@ export class RoomComponent implements OnInit, OnDestroy {
 
     this.setupSignalRHandlers();
     this.setupWebRTCHandlers();
+
+    // After everything is setup, notify others that we are ready
+    if (this.localStream) {
+      this.signalrService.notifyReady(this.roomCode);
+    }
   }
 
   private setupSignalRHandlers(): void {
     // When a new user joins, we (the existing users) initiate a connection to them
     this.signalrService.userJoined$.subscribe(data => {
+      if (this.remoteStreams.has(data.connectionId)) return;
+      
       console.log('User joined:', data);
-      this.webrtcService.createPeerConnection(data.connectionId, true, (signal) => {
-        this.signalrService.sendSignal(data.connectionId, signal);
-      });
-      // Temporarily store name, stream will come later via ontrak
+      // We don't initiate yet, we wait for PeerReady from the new user
       this.remoteStreams.set(data.connectionId, { stream: new MediaStream(), userName: data.userName });
+      this.remoteStreams = new Map(this.remoteStreams);
+    });
+
+    this.signalrService.peerReady$.subscribe(connectionId => {
+      console.log('Peer ready:', connectionId);
+      const peer = this.remoteStreams.get(connectionId);
+      if (peer) {
+        this.webrtcService.createPeerConnection(connectionId, true, (signal) => {
+          this.signalrService.sendSignal(connectionId, signal);
+        });
+      }
     });
 
     // Handle incoming signaling data
@@ -93,12 +112,17 @@ export class RoomComponent implements OnInit, OnDestroy {
 
     // When we join, we get the list of everyone else
     this.signalrService.joinedRoom$.subscribe(room => {
+      if (!room) return;
       room.users.forEach((user: any) => {
         if (user.connectionId !== this.signalrService.getConnectionId()) {
-          this.remoteStreams.set(user.connectionId, { stream: new MediaStream(), userName: user.userName });
-          // Note: The new user waits for offers from existing users in this Mesh setup
+          const cachedStream = this.streamCache.get(user.connectionId);
+          this.remoteStreams.set(user.connectionId, { 
+            stream: cachedStream || new MediaStream(), 
+            userName: user.userName 
+          });
         }
       });
+      this.remoteStreams = new Map(this.remoteStreams);
     });
 
     this.signalrService.userLeft$.subscribe(connectionId => {
@@ -123,6 +147,9 @@ export class RoomComponent implements OnInit, OnDestroy {
         // Trigger change detection by creating a new Map reference
         this.remoteStreams.set(data.connectionId, { ...peer, stream: data.stream });
         this.remoteStreams = new Map(this.remoteStreams);
+      } else {
+        // Cache the stream if the user isn't in the map yet
+        this.streamCache.set(data.connectionId, data.stream);
       }
     });
   }
@@ -159,6 +186,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     const devices = await this.webrtcService.getDevices();
     this.cameras = devices.filter(d => d.kind === 'videoinput');
     this.microphones = devices.filter(d => d.kind === 'audioinput');
+    this.speakers = devices.filter(d => d.kind === 'audiooutput');
     
     // Set initial selected values based on the current local stream tracks
     if (this.localStream) {
@@ -166,6 +194,12 @@ export class RoomComponent implements OnInit, OnDestroy {
       const audioTrack = this.localStream.getAudioTracks()[0];
       if (videoTrack) this.selectedCamera = videoTrack.getSettings().deviceId || '';
       if (audioTrack) this.selectedMic = audioTrack.getSettings().deviceId || '';
+    }
+
+    // Try to find default speaker
+    const defaultSpeaker = this.speakers.find(s => s.deviceId === 'default') || this.speakers[0];
+    if (defaultSpeaker) {
+      this.selectedSpeaker = defaultSpeaker.deviceId;
     }
   }
 
@@ -184,6 +218,12 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.selectedMic = event.target.value;
     this.localStream = await this.webrtcService.getLocalStream(this.selectedCamera, this.selectedMic);
     this.applyCurrentMediaStates();
+    this.showSettings = false;
+  }
+
+  async onSpeakerChange(event: any): Promise<void> {
+    this.selectedSpeaker = event.target.value;
+    await this.webrtcService.setAudioOutput(this.selectedSpeaker);
     this.showSettings = false;
   }
 

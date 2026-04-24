@@ -43,6 +43,11 @@ namespace VideoChatApp.Backend.Hubs
             await Clients.Client(targetConnectionId).SendAsync("SignalReceived", new { SenderConnectionId = Context.ConnectionId, Signal = signal });
         }
 
+        public async Task NotifyReady(string roomCode)
+        {
+            await Clients.GroupExcept(roomCode, Context.ConnectionId).SendAsync("PeerReady", Context.ConnectionId);
+        }
+
         public async Task SendMessage(string roomCode, string userName, string content)
         {
             await Clients.Group(roomCode).SendAsync("MessageReceived", new ChatMessage 
