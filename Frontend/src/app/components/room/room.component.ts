@@ -240,8 +240,10 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   leaveRoom(): void {
+    this.webrtcService.stopLocalStream();
     this.webrtcService.closeAllConnections();
-    this.router.navigate(['/']);
+    this.signalrService.leaveRoom();
+    this.router.navigate(['/'], { replaceUrl: true });
   }
 
   private scrollToBottom(): void {
@@ -251,6 +253,8 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.webrtcService.stopLocalStream();
     this.webrtcService.closeAllConnections();
+    this.signalrService.leaveRoom();
   }
 }

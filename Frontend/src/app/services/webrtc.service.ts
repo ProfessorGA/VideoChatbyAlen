@@ -37,6 +37,13 @@ export class WebrtcService {
 
   constructor() { }
 
+  public stopLocalStream(): void {
+    if (this.localStream) {
+      this.localStream.getTracks().forEach(track => track.stop());
+      this.localStream = null;
+    }
+  }
+
   public async getLocalStream(cameraId?: string, micId?: string): Promise<MediaStream> {
     if (this.localStream) {
       this.localStream.getTracks().forEach(track => track.stop());

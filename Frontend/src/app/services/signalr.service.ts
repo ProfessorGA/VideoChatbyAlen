@@ -114,6 +114,13 @@ export class SignalrService {
     }
   }
 
+  public async leaveRoom(): Promise<void> {
+    this.joinedRoom$.next(null);
+    if (this.hubConnection?.state === signalR.HubConnectionState.Connected) {
+      await this.hubConnection.invoke('LeaveRoom');
+    }
+  }
+
   public getConnectionId(): string | null {
     return this.hubConnection?.connectionId || null;
   }
